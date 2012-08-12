@@ -3,6 +3,7 @@
 	"version" : "0.0.1",
 	"description": "Elasticsearch thrift RPC wrapper",
 	"main": "elasticsearch-thrift.js",
+	"email": "dainis@tillers.lv",
 	"repository" : {
         "type": "git",
         "url": "https://github.com/dainis/node-elasticsearch-thrift.git"
