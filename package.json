@@ -1,5 +1,5 @@
 {
-	"name" : "node-elasticsearch-thrift",
+	"name" : "elasticsearch-thrift",
 	"version" : "0.0.1",
 	"description": "Elasticsearch thrift RPC wrapper",
 	"main": "elasticsearch-thrift.js",
