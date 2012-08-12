@@ -1,0 +1,17 @@
+{
+	"name" : "node-elasticsearch-thrift",
+	"version" : "0.0.1",
+	"description": "Elasticsearch thrift RPC wrapper",
+	"main": "elasticsearch-thrift.js",
+	"repository" : {
+        "type": "git",
+        "url": "https://github.com/dainis/node-elasticsearch-thrift.git"
+    },
+	"dependencies": {
+		"thrift" : "*",
+		"node-uuid" : "*"
+	},
+	"engines" : {
+		"node": ">=0.6.0"
+	}
+}
