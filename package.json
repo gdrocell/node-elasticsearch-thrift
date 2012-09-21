@@ -1,6 +1,6 @@
 {
 	"name" : "elasticsearch-thrift",
-	"version" : "0.0.1",
+	"version" : "0.0.2",
 	"description": "Elasticsearch thrift RPC wrapper",
 	"main": "elasticsearch-thrift.js",
 	"email": "dainis@tillers.lv",
@@ -11,6 +11,10 @@
 	"dependencies": {
 		"thrift" : "*",
 		"node-uuid" : "*"
+	},
+	"devDependencies": {
+		"mocha": "*",
+		"should": "*"
 	},
 	"engines" : {
 		"node": ">=0.6.0"

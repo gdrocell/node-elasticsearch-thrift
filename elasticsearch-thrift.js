@@ -1,8 +1,9 @@
 var thrift = require('thrift'),
-	ElasticRest = require('./lib/Rest'),
-	elasticMethod = require('./lib/elasticsearch_types').Method,
-	elasticStatus = require('./lib/elasticsearch_types').Status,
-	ElasticRestReq = require('./lib/elasticsearch_types').RestRequest,
+	RoundRobinConnections = require('./lib/round.robin.connections'),
+	ElasticRest = require('./lib/thrift/Rest'),
+	elasticMethod = require('./lib/thrift/elasticsearch_types').Method,
+	elasticStatus = require('./lib/thrift/elasticsearch_types').Status,
+	ElasticRestReq = require('./lib/thrift/elasticsearch_types').RestRequest,
 	uid = require('node-uuid');
 
 /**
@@ -37,14 +38,10 @@ function ElasticSearchThrift(options, callback) {
 		throw new Error('You must specify atleast one server');
 	}
 
+	this.options = options;
 	this.servers = options.servers;
-	this.connections = {}; //Here goes the connections after they have been established
-	this.connectionUidList = []; //Each conenction gets unique uid, this array contains all of them
+	this.roundRobin = new RoundRobinConnections();
 
-	this.totalServers = this.servers.length; //Total count of servers to which we must connect
-
-	//Counter for checking whether we have connected to all the servers and we can invoke callback
-	this.connectedServerCnt = 0;
 	this.ready = false; //Flag whether all the servers have connected
 
 	//We cache issued requests while servers haven't been connected yet
@@ -59,6 +56,7 @@ function ElasticSearchThrift(options, callback) {
  * @param {Function} callback [description]
  */
 ElasticSearchThrift.prototype.checkServerStartup = function (callback) {
+
 	if (!this.connectedServerCnt && !this.totalServers) {
 		throw new Error('COULDN\'T CONNECT TO ANY OF THE SERVERS');
 	} else {
@@ -74,7 +72,7 @@ ElasticSearchThrift.prototype.executePendingRequests = function () {
 	var self = this;
 
 	if (this.pendingRequest.length) {
-		this.executePendingRequests.forEach(function (request) {
+		this.pendingRequest.forEach(function (request) {
 			self.execute(request.request, request.callback);
 		});
 	}
@@ -87,52 +85,63 @@ ElasticSearchThrift.prototype.executePendingRequests = function () {
  */
 ElasticSearchThrift.prototype.connectServers = function (callback) {
 
-	var self = this;
+	var self = this,
+		ready = false,
+		readyCnt = 0;
+
+	function callCallback() {
+
+		if(self.ready) {
+			return;
+		}
+
+		readyCnt += 1;
+
+		if(self.options.readyWithOne) { //Allow to start working even with only one server connected
+			self.ready = true;
+			callback();
+		} else {
+			if(self.servers.length === readyCnt) {
+				self.ready = true;
+				callback();
+			}
+		}
+	}
 
 	this.servers.forEach(function (server) {
 
-		//serverUid is used to identify failed connection when error happens
-		var serverUid = uid.v1();
-
-		var connection = thrift.createConnection(server.host, server.port),
-			client = thrift.createClient(ElasticRest, connection);
-
-		connection.on('error', function () {
-
-			if (self.connections[serverUid]) { //Error has happened to already connected server
-				//@TODO what to do now?
-			} else { //Error happened during connection so we skip this server
-				self.totalServers -= 1;
-			}
-
-			self.checkServerStartup(callback);
-		});
-
-		//When connection is established succesfuly then it can be added to connection pool
-		connection.on('connect', function () {
-
-			self.connectionUidList.push(serverUid);
-
-			self.connections[serverUid] = {
-				connection: connection,
-				client: client,
-				parameters: server
-			};
-
-			self.connectedServerCnt += 1;
-
-			self.checkServerStartup(callback);
-		});
+		self.createConnection(server, callCallback)
 	});
 };
 
 /**
- * Round Robin so that we would use each of the servers equaly ofter
+ * Creates new connection to the elasticsearch
+ *
+ * @return {void}
  */
-ElasticSearchThrift.prototype.roundRobinServer = function () {
+ElasticSearchThrift.prototype.createConnection = function(server, callback) {
+	//serverUid is used to identify failed connection when error happens
+	var self = this;
 
-	this.lastUsedServer = ++this.lastUsedServer % this.totalServers;
-	return this.connections[this.connectionUidList[this.lastUsedServer]].client;
+
+	var connection = thrift.createConnection(server.host, server.port),
+		client = thrift.createClient(ElasticRest, connection);
+
+	connection.on('error', function () {
+		self.createConnection(server, self.options.readyWithOne ? callback : null);
+	});
+
+	connection.on('connect', function () {
+
+		self.roundRobin.add({
+			client: client,
+			connection: connection
+		});
+
+		if(callback) {
+			callback();
+		}
+	});
 };
 
 /**
@@ -145,7 +154,8 @@ ElasticSearchThrift.prototype.execute = function (params, callback) {
 
 	requireOptions(params, ['uri', 'method']);
 
-	var request = new ElasticRestReq({
+	var client,
+		request = new ElasticRestReq({
 			method: params.method,
 			uri: params.uri,
 			parameters: params.parameters,
@@ -154,8 +164,34 @@ ElasticSearchThrift.prototype.execute = function (params, callback) {
 		});
 
 	if (this.ready) {
-		var client = this.roundRobinServer();
-		client.execute(request, callback);
+		try {
+			client = this.roundRobin.getNext().client;
+		} catch(e) {
+			return callback(e);
+		}
+
+		client.execute(request, function(error, result) {
+
+			var responseObject;
+
+			if(error) {
+				return callback(error);
+			}
+
+			if(typeof result === 'string') {
+				return callback(new Error(result));
+			}
+
+			if(result.status >= 400) {
+				return callback(new Error(result.body))
+			}
+
+			try {
+				return callback(JSON.parse(result.body));
+			} catch (e) {
+				return callback(new Error(result.body));
+			}
+		});
 	} else {
 		this.pendingRequest.push({
 			request: request,
@@ -173,18 +209,7 @@ ElasticSearchThrift.prototype.execute = function (params, callback) {
  */
 ElasticSearchThrift.prototype.get = function (params, callback) {
 	params.method = elasticMethod.GET;
-	this.execute(params, function (err, results) {
-		//Handle thrift error
-		if (err) {
-			return callback(err);
-		}
-
-		if (results.status >= 400) {
-			return callback(new Error('ElasticSearch error ' + results.body));
-		}
-
-		callback(err, results);
-	});
+	this.execute(params, callback);
 };
 
 /**
