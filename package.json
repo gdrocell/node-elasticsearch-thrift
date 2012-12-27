@@ -1,6 +1,6 @@
 {
 	"name" : "elasticsearch-thrift",
-	"version" : "0.0.2",
+	"version" : "0.0.3",
 	"description": "Elasticsearch thrift RPC wrapper",
 	"main": "elasticsearch-thrift.js",
 	"email": "dainis@tillers.lv",
