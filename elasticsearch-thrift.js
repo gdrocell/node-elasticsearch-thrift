@@ -47,6 +47,10 @@ function ElasticSearchThrift(options, callback) {
 	//We cache issued requests while servers haven't been connected yet
 	this.pendingRequest = [];
 
+	if(typeof callback !== 'function') {
+		callback = function(){};
+	}
+
 	this.connectServers(callback);
 }
 
@@ -153,6 +157,7 @@ ElasticSearchThrift.prototype.createConnection = function(server, callback) {
 ElasticSearchThrift.prototype.execute = function (params, callback) {
 
 	requireOptions(params, ['uri', 'method']);
+	var querystring = require('querystring');
 
 	var client,
 		request = new ElasticRestReq({
@@ -160,7 +165,7 @@ ElasticSearchThrift.prototype.execute = function (params, callback) {
 			uri: params.uri,
 			parameters: params.parameters,
 			headers: params.headers,
-			body: params.boy
+			body: params.body ? JSON.stringify(params.body) : ''
 		});
 
 	if (this.ready) {
@@ -178,19 +183,17 @@ ElasticSearchThrift.prototype.execute = function (params, callback) {
 				return callback(error);
 			}
 
-			if(typeof result === 'string') {
-				return callback(new Error(result));
-			}
-
 			if(result.status >= 400) {
 				return callback(new Error(result.body))
 			}
 
 			try {
-				return callback(JSON.parse(result.body));
+				responseObject = JSON.parse(result.body);
 			} catch (e) {
 				return callback(new Error(result.body));
 			}
+
+			callback(null, responseObject);
 		});
 	} else {
 		this.pendingRequest.push({
