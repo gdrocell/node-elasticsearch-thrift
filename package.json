@@ -9,7 +9,7 @@
         "url": "https://github.com/dainis/node-elasticsearch-thrift.git"
     },
 	"dependencies": {
-		"thrift" : "*",
+		"node-thrift" : "*",
 		"node-uuid" : "*"
 	},
 	"devDependencies": {
