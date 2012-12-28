@@ -1,10 +1,8 @@
-var thrift = require('thrift'),
+var thrift = require('node-thrift'),
 	RoundRobinConnections = require('./lib/round.robin.connections'),
 	ElasticRest = require('./lib/thrift/Rest'),
 	elasticMethod = require('./lib/thrift/elasticsearch_types').Method,
-	elasticStatus = require('./lib/thrift/elasticsearch_types').Status,
-	ElasticRestReq = require('./lib/thrift/elasticsearch_types').RestRequest,
-	uid = require('node-uuid');
+	ElasticRestReq = require('./lib/thrift/elasticsearch_types').RestRequest;
 
 /**
  * Helper method for checking whether whether in object there are set required properties
@@ -90,7 +88,6 @@ ElasticSearchThrift.prototype.executePendingRequests = function () {
 ElasticSearchThrift.prototype.connectServers = function (callback) {
 
 	var self = this,
-		ready = false,
 		readyCnt = 0;
 
 	function callCallback() {
@@ -114,7 +111,7 @@ ElasticSearchThrift.prototype.connectServers = function (callback) {
 
 	this.servers.forEach(function (server) {
 
-		self.createConnection(server, callCallback)
+		self.createConnection(server, callCallback);
 	});
 };
 
@@ -125,14 +122,14 @@ ElasticSearchThrift.prototype.connectServers = function (callback) {
  */
 ElasticSearchThrift.prototype.createConnection = function(server, callback) {
 	//serverUid is used to identify failed connection when error happens
-	var self = this;
-
-
-	var connection = thrift.createConnection(server.host, server.port),
+	var self = this,
+		connection = thrift.createConnection(server.host, server.port),
 		client = thrift.createClient(ElasticRest, connection);
 
 	connection.on('error', function () {
-		self.createConnection(server, self.options.readyWithOne ? callback : null);
+		setTimeout(function() {
+			self.createConnection(server, self.options.readyWithOne ? callback : null);
+		}, 100);
 	});
 
 	connection.on('connect', function () {
@@ -157,8 +154,6 @@ ElasticSearchThrift.prototype.createConnection = function(server, callback) {
 ElasticSearchThrift.prototype.execute = function (params, callback) {
 
 	requireOptions(params, ['uri', 'method']);
-	var querystring = require('querystring');
-
 	var client,
 		request = new ElasticRestReq({
 			method: params.method,
@@ -184,7 +179,7 @@ ElasticSearchThrift.prototype.execute = function (params, callback) {
 			}
 
 			if(result.status >= 400) {
-				return callback(new Error(result.body))
+				return callback(new Error(result.body));
 			}
 
 			try {
