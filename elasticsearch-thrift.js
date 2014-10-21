@@ -1,3 +1,8 @@
+/**
+ * patched 10/21/2014 by Gary Drocella
+ * - Adding instance variables for managing thrift connections
+ */
+
 var thrift = require('node-thrift'),
 	RoundRobinConnections = require('./lib/round.robin.connections'),
 	ElasticRest = require('./lib/thrift/Rest'),
@@ -49,6 +54,7 @@ function ElasticSearchThrift(options, callback) {
 		callback = function(){};
 	}
 
+	this.connections = [];
 	this.connectServers(callback);
 }
 
@@ -125,6 +131,8 @@ ElasticSearchThrift.prototype.createConnection = function(server, callback) {
 	var self = this,
 		connection = thrift.createConnection(server.host, server.port),
 		client = thrift.createClient(ElasticRest, connection);
+
+	this.connections.push(connection);
 
 	connection.on('error', function () {
 		setTimeout(function() {
@@ -273,9 +281,14 @@ ElasticSearchThrift.prototype.options = function (params, callback) {
 ElasticSearchThrift.prototype.closeConnections = function () {
 	var self = this;
 	this.ready = false;
-	this.connectionUidList.forEach(function (uid) {
-		self.connections[uid].connection.end();
-	});
+	//this.connectionUidList.forEach(function (uid) {
+	//	self.connections[uid].connection.end();
+	//});
+
+	var x;
+	for(x in this.connections) {
+	    this.connections[x].connection.end();
+	}
 };
 
 module.exports = ElasticSearchThrift;
