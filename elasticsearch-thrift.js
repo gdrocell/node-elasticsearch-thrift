@@ -1,13 +1,17 @@
 /**
  * patched 10/21/2014 by Gary Drocella
  * - Adding instance variables for managing thrift connections
+ * - Adding thrift ssl connection.
  */
 
 var thrift = require('node-thrift'),
 	RoundRobinConnections = require('./lib/round.robin.connections'),
 	ElasticRest = require('./lib/thrift/Rest'),
 	elasticMethod = require('./lib/thrift/elasticsearch_types').Method,
-	ElasticRestReq = require('./lib/thrift/elasticsearch_types').RestRequest;
+        ElasticRestReq = require('./lib/thrift/elasticsearch_types').RestRequest,
+        ThriftUtils = require('thriftutils').ThriftUtils,
+        ezConfiguration = require("ezConfiguration"),
+        ttransport = require('thrift/lib/thrift/transport');
 
 /**
  * Helper method for checking whether whether in object there are set required properties
@@ -34,6 +38,7 @@ function requireOptions(where, required) {
  * @param {Function} callback Callback which will be called when all the servers have been connected
  */
 function ElasticSearchThrift(options, callback) {
+	this.ezconfig = new ezConfiguration.EzConfiguration();
 
 	requireOptions(options, ['servers']);
 
@@ -54,8 +59,9 @@ function ElasticSearchThrift(options, callback) {
 		callback = function(){};
 	}
 
-	this.connections = [];
+ 	this.connections = [];
 	this.connectServers(callback);
+	
 }
 
 /**
@@ -64,7 +70,7 @@ function ElasticSearchThrift(options, callback) {
  * @param {Function} callback [description]
  */
 ElasticSearchThrift.prototype.checkServerStartup = function (callback) {
-
+ 
 	if (!this.connectedServerCnt && !this.totalServers) {
 		throw new Error('COULDN\'T CONNECT TO ANY OF THE SERVERS');
 	} else {
@@ -116,7 +122,7 @@ ElasticSearchThrift.prototype.connectServers = function (callback) {
 	}
 
 	this.servers.forEach(function (server) {
-
+ 
 		self.createConnection(server, callCallback);
 	});
 };
@@ -128,9 +134,21 @@ ElasticSearchThrift.prototype.connectServers = function (callback) {
  */
 ElasticSearchThrift.prototype.createConnection = function(server, callback) {
 	//serverUid is used to identify failed connection when error happens
-	var self = this,
-		connection = thrift.createConnection(server.host, server.port),
-		client = thrift.createClient(ElasticRest, connection);
+    var self = this, 
+    thriftutils = new ThriftUtils(this.ezconfig);
+    console.log(thriftutils);
+
+    var connection = null;
+    if(this.ezconfig.getBoolean("thrift.use.ssl")) {
+	console.log("Client Connection is using ssl");
+	console.log("initial transport" +  ttransport.TFramedTransport);
+	connection = thriftutils._createSSLConnection(server.host, server.port, { transport: ttransport.TFramedTransport });
+    }
+    else {
+	connection = thrift.createConnection(server.host, server.port);
+    }
+
+    client = thrift.createClient(ElasticRest, connection);
 
 	this.connections.push(connection);
 
@@ -190,13 +208,14 @@ ElasticSearchThrift.prototype.execute = function (params, callback) {
 				return callback(new Error(result.body));
 			}
 
-			try {
-				responseObject = JSON.parse(result.body);
-			} catch (e) {
-				return callback(new Error(result.body));
-			}
+			//try {
+			//	responseObject = JSON.parse(result.body);
+			//} catch (e) {
+			//	return callback(new Error(result.body));
+			//}
 
-			callback(null, responseObject);
+			/* We want the result object so we can get headers and body */
+			callback(null, result);
 		});
 	} else {
 		this.pendingRequest.push({
@@ -285,9 +304,9 @@ ElasticSearchThrift.prototype.closeConnections = function () {
 	//	self.connections[uid].connection.end();
 	//});
 
-	var x;
-	for(x in this.connections) {
-	    this.connections[x].connection.end();
+	while(this.connections.length > 0) {
+	    var arr = this.connections.splice(0,1);
+            arr[0].connection.end();
 	}
 };
 
