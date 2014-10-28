@@ -136,12 +136,9 @@ ElasticSearchThrift.prototype.createConnection = function(server, callback) {
 	//serverUid is used to identify failed connection when error happens
     var self = this, 
     thriftutils = new ThriftUtils(this.ezconfig);
-    console.log(thriftutils);
 
     var connection = null;
     if(this.ezconfig.getBoolean("thrift.use.ssl")) {
-	console.log("Client Connection is using ssl");
-	console.log("initial transport" +  ttransport.TFramedTransport);
 	connection = thriftutils._createSSLConnection(server.host, server.port, { transport: ttransport.TFramedTransport });
     }
     else {
