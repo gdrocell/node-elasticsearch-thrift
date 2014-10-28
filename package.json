@@ -10,7 +10,9 @@
     },
 	"dependencies": {
 		"node-thrift" : "*",
-		"node-uuid" : "*"
+		"node-uuid" : "*",
+		"thriftutils": "git+ssh://git@git.lab76.org:ezbake/thriftutils.git#2.0-nodejs_repo",
+		"ezConfiguration":"git+ssh://git@git.lab76.org:ezbake/ezbake-configuration.git#2.0-nodejs_repo"
 	},
 	"devDependencies": {
 		"mocha": "*",
