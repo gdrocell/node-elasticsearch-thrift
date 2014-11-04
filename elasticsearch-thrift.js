@@ -139,7 +139,7 @@ ElasticSearchThrift.prototype.createConnection = function(server, callback) {
 
     var connection = null;
     if(this.ezconfig.getBoolean("thrift.use.ssl")) {
-	connection = thriftutils._createSSLConnection(server.host, server.port, { transport: ttransport.TFramedTransport });
+	connection = thriftutils._createSSLConnection([server.host + ":" + server.port], { transport: ttransport.TFramedTransport });
     }
     else {
 	connection = thrift.createConnection(server.host, server.port);
