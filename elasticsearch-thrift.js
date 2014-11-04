@@ -137,17 +137,9 @@ ElasticSearchThrift.prototype.createConnection = function(server, callback) {
     var self = this, 
     thriftutils = new ThriftUtils(this.ezconfig);
 
-    var connection = null;
-    if(this.ezconfig.getBoolean("thrift.use.ssl")) {
-	connection = thriftutils._createSSLConnection([server.host + ":" + server.port], { transport: ttransport.TFramedTransport });
-    }
-    else {
-	connection = thrift.createConnection(server.host, server.port);
-    }
-
-    client = thrift.createClient(ElasticRest, connection);
-
-	this.connections.push(connection);
+    var doConnect = function(connection) {
+	client = thrift.createClient(ElasticRest, connection);
+	self.connections.push(connection);
 
 	connection.on('error', function () {
 		setTimeout(function() {
@@ -166,6 +158,20 @@ ElasticSearchThrift.prototype.createConnection = function(server, callback) {
 			callback();
 		}
 	});
+    }
+
+    if(this.ezconfig.getBoolean("thrift.use.ssl")) {
+	thriftutils._createSSLConnection([{host: server.host, port: server.port}], { transport: ttransport.TFramedTransport }, function(err,conn) {
+		if(err) {
+		    console.log("Error: " + err);
+		}
+		doConnect(conn);
+	});
+    }
+    else {
+	var conn = thrift.createConnection(server.host, server.port);
+	doConnect(conn);
+    }
 };
 
 /**
