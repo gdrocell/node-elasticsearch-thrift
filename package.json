@@ -11,8 +11,8 @@
 	"dependencies": {
 		"node-thrift" : "*",
 		"node-uuid" : "*",
-		"thriftutils": "git+ssh://git@git.lab76.org:ezbake/thriftutils.git#v2.0_nodejs_repo",
-		"ezConfiguration":"git+ssh://git@git.lab76.org:ezbake/ezbake-configuration.git#v2.0_nodejs_repo",
+		"ezbake-thrift-utils": "2.0.0",
+		"ezbake-configuration":"2.0.0",
 		"thrift": "0.9.1"
 	},
 	"devDependencies": {
@@ -21,5 +21,8 @@
 	},
 	"engines" : {
 		"node": ">=0.6.0"
+	},
+	"publishConfig": {
+	   "registry":"https://artifacts.lab76.org/artifactory/api/npm/npm-local"
 	}
 }
