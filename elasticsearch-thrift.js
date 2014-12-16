@@ -9,7 +9,7 @@ var thrift = require('node-thrift'),
 	ElasticRest = require('./lib/thrift/Rest'),
 	elasticMethod = require('./lib/thrift/elasticsearch_types').Method,
         ElasticRestReq = require('./lib/thrift/elasticsearch_types').RestRequest,
-        ThriftUtils = require('thriftutils').ThriftUtils,
+        ThriftUtils = require('ezbake-thrift-utils').ThriftUtils,
         ezConfiguration = require("ezConfiguration"),
         ttransport = require('thrift/lib/thrift/transport');
 
