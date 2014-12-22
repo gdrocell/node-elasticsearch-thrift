@@ -192,7 +192,6 @@ ElasticSearchThrift.prototype.execute = function (params, callback) {
 			body: params.body ? params.body : ''
 		});
 
-	console.log("Ready? " + this.ready);
 	if (this.ready) {
 		try {
 			client = this.roundRobin.getNext().client;
