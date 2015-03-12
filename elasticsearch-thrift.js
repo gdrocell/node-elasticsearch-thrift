@@ -204,13 +204,15 @@ ElasticSearchThrift.prototype.execute = function (params, callback) {
 			var responseObject;
 			
 			if(error) {
-				return callback(error);
+			    return callback(error);
 			}
 
-			try {
+			if(result.body) {
+			    try {
 				responseObject = JSON.parse(result.body);
-			} catch (e) {
+			    } catch (e) {
 				return callback(new Error(result.body));
+			    }
 			}
 
 			/* We want the result object so we can get headers and body */
