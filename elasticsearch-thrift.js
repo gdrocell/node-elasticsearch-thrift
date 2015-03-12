@@ -202,15 +202,9 @@ ElasticSearchThrift.prototype.execute = function (params, callback) {
 		client.execute(request, function(error, result) {
 
 			var responseObject;
-
-			console.log("Error " + error + "\n" + "Result: " + result);
-
+			
 			if(error) {
 				return callback(error);
-			}
-
-			if(result.status >= 400) {
-				return callback(new Error(result.body));
 			}
 
 			try {
