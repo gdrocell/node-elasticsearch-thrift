@@ -11,7 +11,7 @@
 	"dependencies": {
 		"node-thrift" : "*",
 		"node-uuid" : "*",
-		"ezbake-thrift-utils": "2.0.0",
+		"ezbake-thrift-utils": ">=2.0.2-snapshot",
 		"ezbake-configuration":"2.0.0",
 		"thrift": "0.9.1"
 	},
